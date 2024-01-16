@@ -1,7 +1,6 @@
 import random
 from questions import questions
 
-
 def get_random_questions():
     return random.sample(questions, 5)
 
