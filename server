@@ -1,21 +1,47 @@
 import socket
+import random
+import hashlib
+import re
+from questions import questions
+
+def get_random_questions():
+    return random.sample(questions, 5)
+
+def handle_client(conn):
+    score = 0
+    for question in get_random_questions():
+        conn.send(str(question).encode('utf-8'))
+        answer = int(conn.recv(1024).decode('utf-8'))
+        if answer == question['answer']:
+            score += 1
+            conn.send('Correcto!'.encode('utf-8'))
+        else:
+            conn.send('Incorrecto.'.encode('utf-8'))
+    conn.send(f'Tu puntuación final es {score}.'.encode('utf-8'))
 
 def login_usuario(conn):
-    opcion, nombre_usuario, contrasena = conn.recv(1024).decode().split(',')
+    opcion, email, contrasena = conn.recv(1024).decode().split(',')
+    hashed_password = hashlib.sha256(contrasena.encode()).hexdigest()
 
     if opcion == '1':
         # Aquí deberías implementar la lógica de inicio de sesión
         with open('usuarios.txt', 'r') as f:
             usuarios = f.read().splitlines()
             for usuario in usuarios:
-                if usuario == f"{nombre_usuario},{contrasena}":
+                if usuario == f"{email},{hashed_password}":
                     conn.send("OK".encode())
                     return
-            conn.send("Nombre de usuario o contraseña incorrectos.".encode())
+            conn.send("Correo electrónico o contraseña incorrectos.".encode())
     elif opcion == '2':
         # Aquí deberías implementar la lógica de registro
+        with open('usuarios.txt', 'r') as f:
+            usuarios = f.read().splitlines()
+            for usuario in usuarios:
+                if usuario.split(',')[0] == email:
+                    conn.send("El correo electrónico ya está registrado.".encode())
+                    return
         with open('usuarios.txt', 'a') as f:
-            f.write(f"{nombre_usuario},{contrasena}\n")
+            f.write(f"{email},{hashed_password}\n")
             conn.send("OK".encode())
 
 def iniciar_servidor():
@@ -29,6 +55,13 @@ def iniciar_servidor():
 
         # Autenticar al usuario o registrar nuevo usuario
         login_usuario(conn)
+
+        # Recibir apodo del usuario
+        nickname = conn.recv(1024).decode()
+        print(f"Apodo del usuario: {nickname}")
+
+        # Iniciar el juego
+        handle_client(conn)
 
         print(f"Conexión cerrada con {addr}")
         conn.close()

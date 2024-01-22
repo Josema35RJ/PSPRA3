@@ -1,16 +1,20 @@
 import socket
+import re
 
-HOST = '10.10.1.17'
+HOST = 'localhost'
 PORT = 9999
 # Creamos un socket del cliente
 client_socket = socket.socket()
 client_socket.connect((HOST, PORT))
 
-# Función para ingresar nombre de usuario y contraseña
+# Función para ingresar correo electrónico y contraseña
 def ingresar_credenciales():
-    nombre_usuario = input("Ingrese su nombre de usuario: ")
+    email = input("Ingrese su correo electrónico: ")
+    while not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        print("El correo electrónico no es válido.")
+        email = input("Ingrese su correo electrónico: ")
     contrasena = input("Ingrese su contraseña: ")
-    return f"{nombre_usuario},{contrasena}"
+    return f"{email},{contrasena}"
 
 # Proceso de inicio de sesión o registro
 ingresado_con_exito = False
@@ -34,6 +38,10 @@ while not ingresado_con_exito:
         ingresado_con_exito = True
     else:
         print(respuesta)
+
+# Pedir apodo al usuario
+nickname = input("Ingrese su apodo: ")
+client_socket.send(nickname.encode())
 
 # Cerrar conexión
 client_socket.close()
