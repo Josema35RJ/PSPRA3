@@ -1,14 +1,22 @@
 import socket
 
 def login_usuario(conn):
-    conn.send("Ingrese su nombre de usuario: ".encode())
-    nombre_usuario = conn.recv(1024).decode()
+    opcion, nombre_usuario, contrasena = conn.recv(1024).decode().split(',')
 
-    conn.send("Ingrese su contraseña: ".encode())
-    contrasena = conn.recv(1024).decode()
-
-    # Aquí deberías implementar la lógica de autenticación
-    # ...
+    if opcion == '1':
+        # Aquí deberías implementar la lógica de inicio de sesión
+        with open('usuarios.txt', 'r') as f:
+            usuarios = f.read().splitlines()
+            for usuario in usuarios:
+                if usuario == f"{nombre_usuario},{contrasena}":
+                    conn.send("OK".encode())
+                    return
+            conn.send("Nombre de usuario o contraseña incorrectos.".encode())
+    elif opcion == '2':
+        # Aquí deberías implementar la lógica de registro
+        with open('usuarios.txt', 'a') as f:
+            f.write(f"{nombre_usuario},{contrasena}\n")
+            conn.send("OK".encode())
 
 def iniciar_servidor():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -19,7 +27,7 @@ def iniciar_servidor():
         conn, addr = server_socket.accept()
         print(f"Conexión establecida con {addr}")
 
-        # Autenticar al usuario
+        # Autenticar al usuario o registrar nuevo usuario
         login_usuario(conn)
 
         print(f"Conexión cerrada con {addr}")

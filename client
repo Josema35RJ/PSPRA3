@@ -1,6 +1,5 @@
 import socket
 
-
 HOST = '10.10.1.17'
 PORT = 9999
 # Creamos un socket del cliente
@@ -13,26 +12,28 @@ def ingresar_credenciales():
     contrasena = input("Ingrese su contraseña: ")
     return f"{nombre_usuario},{contrasena}"
 
-# Proceso de inicio de sesión
+# Proceso de inicio de sesión o registro
 ingresado_con_exito = False
 while not ingresado_con_exito:
+    # Mostrar menú
+    print("1. Iniciar sesión")
+    print("2. Registrarse")
+    opcion = input("Seleccione una opción: ")
+
     # Ingresar credenciales
     credenciales = ingresar_credenciales()
 
-    # Enviar credenciales al servidor
-    client_socket.send(credenciales.encode())
+    # Enviar opción y credenciales al servidor
+    client_socket.send(f"{opcion},{credenciales}".encode())
 
     # Recibir respuesta del servidor
     respuesta = client_socket.recv(1024).decode()
 
     if respuesta == "OK":
-        print("Inicio de sesión exitoso.")
+        print("Operación exitosa.")
         ingresado_con_exito = True
     else:
         print(respuesta)
-
-# Cerrar conexión
-client_socket.close()
 
 # Cerrar conexión
 client_socket.close()
