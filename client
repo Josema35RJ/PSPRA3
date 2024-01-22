@@ -1,47 +1,61 @@
 import socket
 import re
+import inquirer
+from colorama import Fore, Style
+from tqdm import tqdm
+import time
 
 HOST = 'localhost'
-PORT = 9999
-# Creamos un socket del cliente
+PORT = 65535
 client_socket = socket.socket()
 client_socket.connect((HOST, PORT))
 
-# Función para ingresar correo electrónico y contraseña
 def ingresar_credenciales():
-    email = input("Ingrese su correo electrónico: ")
-    while not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-        print("El correo electrónico no es válido.")
-        email = input("Ingrese su correo electrónico: ")
-    contrasena = input("Ingrese su contraseña: ")
-    return f"{email},{contrasena}"
+    questions = [
+        inquirer.Text('email', message="Ingrese su correo electrónico", validate=lambda _, x: re.match(r"[^@]+@[^@]+\.[^@]+", x) is not None),
+        inquirer.Password('contrasena', message="Ingrese su contraseña")
+    ]
+    answers = inquirer.prompt(questions)
+    return f"{answers['email']},{answers['contrasena']}"
 
-# Proceso de inicio de sesión o registro
-ingresado_con_exito = False
-while not ingresado_con_exito:
-    # Mostrar menú
-    print("1. Iniciar sesión")
-    print("2. Registrarse")
-    opcion = input("Seleccione una opción: ")
+def iniciar_sesion_o_registrarse():
+    ingresado_con_exito = False
+    while not ingresado_con_exito:
+        questions = [
+            inquirer.List('opcion',
+                          message="Seleccione una opción",
+                          choices=['Iniciar sesión', 'Registrarse'],
+                          ),
+        ]
+        answers = inquirer.prompt(questions)
+        opcion = '1' if answers['opcion'] == 'Iniciar sesión' else '2'
+        credenciales = ingresar_credenciales()
+        client_socket.send(f"{opcion},{credenciales}".encode())
+        respuesta = client_socket.recv(1024).decode()
+        if respuesta == "OK":
+            print(Fore.GREEN + "Operación exitosa." + Style.RESET_ALL)
+            ingresado_con_exito = True
+        else:
+            print(Fore.RED + respuesta + Style.RESET_ALL)
 
-    # Ingresar credenciales
-    credenciales = ingresar_credenciales()
+iniciar_sesion_o_registrarse()
 
-    # Enviar opción y credenciales al servidor
-    client_socket.send(f"{opcion},{credenciales}".encode())
+# Espera la confirmación del servidor antes de solicitar el apodo
+confirmacion = client_socket.recv(1024).decode()
+if confirmacion == "OK":
+    nickname = input("Ingrese su apodo: ")
+    client_socket.send(nickname.encode())
 
-    # Recibir respuesta del servidor
-    respuesta = client_socket.recv(1024).decode()
+for _ in tqdm(range(5), desc="Progreso del juego", bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Style.RESET_ALL)):
+    question = client_socket.recv(1024).decode()
+    print(Fore.YELLOW + question + Style.RESET_ALL)
+    answer = input("Ingrese su respuesta: ")
+    client_socket.send(answer.encode())
+    result = client_socket.recv(1024).decode()
+    print(Fore.CYAN + result + Style.RESET_ALL)
+    time.sleep(1)
 
-    if respuesta == "OK":
-        print("Operación exitosa.")
-        ingresado_con_exito = True
-    else:
-        print(respuesta)
+score = client_socket.recv(1024).decode()
+print(Fore.GREEN + f"Tu puntuación final es {score}." + Style.RESET_ALL)
 
-# Pedir apodo al usuario
-nickname = input("Ingrese su apodo: ")
-client_socket.send(nickname.encode())
-
-# Cerrar conexión
 client_socket.close()
