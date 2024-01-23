@@ -75,24 +75,28 @@ class TriviaServer:
             client.send(message)
 
     def handle(self, client):
-     pregunta_actual = 0
-     while pregunta_actual < 5:
-        try:
-            if client in self.clients:  # Verifica si el cliente aún está conectado
-                respuesta = client.recv(1024).decode()
-                print(f"Respuesta recibida: {respuesta}")  # Imprime la respuesta para depurar
-                # Envía una nueva pregunta después de recibir una respuesta
-                pregunta_actual += 1
-                if pregunta_actual < len(questions):
-                    self.enviar_pregunta(client, questions[pregunta_actual])
-                else:
-                    break  # Sal del bucle si ya has enviado todas las preguntas
-        except Exception as e:
-            print(f"Error: {e}")
-            break
+        pregunta_actual = 0
+        while pregunta_actual < 5:
+            try:
+                if client in self.clients:  # Verifica si el cliente aún está conectado
+                    respuesta = client.recv(1024).decode()
+                    print(f"Respuesta recibida: {respuesta}")  # Imprime la respuesta para depurar
+
+                    # Envía una nueva pregunta después de recibir una respuesta
+                    pregunta_numero = random.randint(0, len(questions) - 1)
+                    self.enviar_pregunta(client, questions[pregunta_numero])
+                    
+                    pregunta_actual += 1
+
+                    if pregunta_actual >= len(questions):
+                       print(f"FIN DE LAS PREGUNTAS")
+            except Exception as e:
+                print(f"Error: {e}")
+                break
+
 
     def receive(self):
-        while len(self.clients) < 1:
+        while True:
             client, address = self.server.accept()
             print(Fore.GREEN + f"Conexión establecida con {str(address)}" + Style.RESET_ALL)
 
@@ -105,12 +109,15 @@ class TriviaServer:
                 print(Fore.GREEN + f"Apodo del cliente: {nickname}!" + Style.RESET_ALL)
                 self.broadcast(f"{nickname} se unió al juego!".encode('utf-8'))
                 client.send('Conectado al servidor!'.encode('ascii'))
-
+                
                 # Envía la primera pregunta al cliente
-                self.enviar_pregunta(client, questions[0])
+                pregunta_numero = random.randint(0, len(questions) - 1)
+                self.enviar_pregunta(client, questions[pregunta_numero])                
+               
 
             thread = threading.Thread(target=self.handle, args=(client,))
             thread.start()
+
 
     def enviar_pregunta(self, client, pregunta):
         opciones = '\n'.join(f"{chr(97 + i)}. {opcion}" for i, opcion in enumerate(pregunta['options']))
