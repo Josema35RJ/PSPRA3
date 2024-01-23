@@ -46,13 +46,21 @@ if confirmacion == "NICK":
     nickname = input("Ingrese su apodo: ")
     client_socket.send(nickname.encode())
 
-for _ in tqdm(range(5), desc="Progreso del juego", bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Style.RESET_ALL)):
-    question = client_socket.recv(1024).decode()
-    print(Fore.YELLOW + question + Style.RESET_ALL)
-    answer = input("Ingrese el número de su respuesta: ")
-   
-
-
+while True:
+    try:
+        message = client_socket.recv(1024).decode()
+        if message.endswith('?'):  # Si el mensaje termina con un signo de interrogación, es una pregunta
+          print(Fore.GREEN + message + Style.RESET_ALL)
+        elif message.endswith('!'):
+            print(Fore.YELLOW + message + Style.RESET_ALL)
+        else:  # Si no, es un mensaje normal 
+            print(Fore.YELLOW + message + Style.RESET_ALL)
+            answer = input("Ingrese el número de su respuesta: ")
+            client_socket.send(answer.encode())
+    except Exception as e:
+        print(f"Error: {e}")
+        break
+    
 score = client_socket.recv(1024).decode()
 print(Fore.GREEN + f"Tu puntuación final es {score}." + Style.RESET_ALL)
 

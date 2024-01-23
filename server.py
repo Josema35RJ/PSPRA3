@@ -59,6 +59,7 @@ def login_usuario(conn):
                 return True
         conn.send("Correo electrónico o contraseña incorrectos.".encode())
     return False
+
 class TriviaServer:
     def __init__(self, host = 'localhost', port = 9999):
         self.host = host
@@ -74,21 +75,21 @@ class TriviaServer:
             client.send(message)
 
     def handle(self, client):
-        pregunta_actual = 0
-        while True:
-            try:
-                if client in self.clients:  # Verifica si el cliente aún está conectado
-                    message = client.recv(1024)
-                    self.broadcast(message)
-                    # Envía una nueva pregunta después de recibir una respuesta
-                    pregunta_actual += 1
-                    if pregunta_actual < len(questions):
-                        self.enviar_pregunta(client, questions[pregunta_actual])
-                    else:
-                        break  # Sal del bucle si ya has enviado todas las preguntas
-            except:
-                # Manejo de errores aquí
-                break
+     pregunta_actual = 0
+     while pregunta_actual < 5:
+        try:
+            if client in self.clients:  # Verifica si el cliente aún está conectado
+                respuesta = client.recv(1024).decode()
+                print(f"Respuesta recibida: {respuesta}")  # Imprime la respuesta para depurar
+                # Envía una nueva pregunta después de recibir una respuesta
+                pregunta_actual += 1
+                if pregunta_actual < len(questions):
+                    self.enviar_pregunta(client, questions[pregunta_actual])
+                else:
+                    break  # Sal del bucle si ya has enviado todas las preguntas
+        except Exception as e:
+            print(f"Error: {e}")
+            break
 
     def receive(self):
         while len(self.clients) < 1:
@@ -107,6 +108,9 @@ class TriviaServer:
 
                 # Envía la primera pregunta al cliente
                 self.enviar_pregunta(client, questions[0])
+
+            thread = threading.Thread(target=self.handle, args=(client,))
+            thread.start()
 
     def enviar_pregunta(self, client, pregunta):
         opciones = '\n'.join(f"{chr(97 + i)}. {opcion}" for i, opcion in enumerate(pregunta['options']))

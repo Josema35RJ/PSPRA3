@@ -28,12 +28,12 @@ class TriviaServer:
                 self.broadcast(message)
             except:
                 index = self.clients.index(client)
-                self.clients.remove(client)
-                client.close()
+       
+               
                 nickname = self.nicknames[index]
-                self.nicknames.remove(nickname)
+       
                 self.broadcast(f'{nickname} left the game!'.encode('ascii'))
-                break
+
     def enviar_pregunta(self, client, pregunta):
      client.send(pregunta['question'].encode('utf-8'))
      opciones = [inquirer.List('respuesta',
