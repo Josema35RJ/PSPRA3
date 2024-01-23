@@ -5,8 +5,9 @@ from colorama import Fore, Style
 from tqdm import tqdm
 import time
 
-HOST = 'localhost'
-PORT = 65535
+HOST = '10.10.1.14'
+PORT = 54125
+
 client_socket = socket.socket()
 client_socket.connect((HOST, PORT))
 

@@ -5,7 +5,7 @@ from questions import questions
 from colorama import Fore, Style
 
 class TriviaServer:
-    def __init__(self, host = 'localhost', port = 65535):
+    def __init__(self, host = 'localhost', port = 9999):
         self.host = host
         self.port = port
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
