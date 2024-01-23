@@ -1,0 +1,8 @@
+from cryptography.fernet import Fernet
+
+# Genera una clave
+clave = Fernet.generate_key()
+
+# Guarda la clave en un archivo
+with open("clave.key", "wb") as clave_archivo:
+    clave_archivo.write(clave)

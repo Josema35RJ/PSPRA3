@@ -3,6 +3,8 @@ import threading
 import random
 from questions import questions
 from colorama import Fore, Style
+from server import login_usuario
+
 
 class TriviaServer:
     def __init__(self, host = 'localhost', port = 9999):
@@ -31,21 +33,28 @@ class TriviaServer:
                 self.nicknames.remove(nickname)
                 self.broadcast(f'{nickname} left the game!'.encode('ascii'))
                 break
+    def enviar_pregunta(self, client, pregunta):
+        client.send(pregunta['question'].encode('utf-8'))
+        for i, opcion in enumerate(pregunta['options']):
+            client.send(f"{i}. {opcion}".encode('utf-8'))
 
     def receive(self):
         while len(self.clients) < 1:
             client, address = self.server.accept()
             print(Fore.GREEN + f"Conexión establecida con {str(address)}" + Style.RESET_ALL)
 
-            client.send('NICK'.encode('ascii'))
-            nickname = client.recv(1024).decode('ascii')
-            self.nicknames.append(nickname)
-            self.clients.append(client)
+            if login_usuario(client):
+                client.send('NICK'.encode('ascii'))
+                nickname = client.recv(1024).decode('ascii')
+                self.nicknames.append(nickname)
+                self.clients.append(client)
 
-            print(Fore.GREEN + f"Apodo del cliente: {nickname}!" + Style.RESET_ALL)
-            self.broadcast(f"{nickname} se unió al juego!".encode('utf-8'))
-            client.send('Conectado al servidor!'.encode('ascii'))
+                print(Fore.GREEN + f"Apodo del cliente: {nickname}!" + Style.RESET_ALL)
+                self.broadcast(f"{nickname} se unió al juego!".encode('utf-8'))
+                client.send('Conectado al servidor!'.encode('ascii'))
 
+                # Envía la primera pregunta al cliente
+                self.enviar_pregunta(client, questions[0])
             print(Fore.YELLOW + "Jugadores en el juego:" + Style.RESET_ALL)
             for nick in self.nicknames:
                 print(nick)
