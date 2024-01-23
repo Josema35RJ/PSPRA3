@@ -6,6 +6,7 @@ from cryptography.fernet import Fernet
 from colorama import Fore, Style
 import base64
 from questions import questions
+import random
 
 def hash_password(password):
     salt = os.urandom(32)
@@ -73,24 +74,21 @@ class TriviaServer:
             client.send(message)
 
     def handle(self, client):
+        pregunta_actual = 0
         while True:
             try:
                 if client in self.clients:  # Verifica si el cliente aún está conectado
                     message = client.recv(1024)
                     self.broadcast(message)
-                else:
-                    break
+                    # Envía una nueva pregunta después de recibir una respuesta
+                    pregunta_actual += 1
+                    if pregunta_actual < len(questions):
+                        self.enviar_pregunta(client, questions[pregunta_actual])
+                    else:
+                        break  # Sal del bucle si ya has enviado todas las preguntas
             except:
-                if client in self.clients:
-                    index = self.clients.index(client)
-                    self.clients.remove(client)
-                    client.close()
-                    nickname = self.nicknames[index]
-                    self.nicknames.remove(nickname)
-                    self.broadcast(f'{nickname} left the game!'.encode('ascii'))
+                # Manejo de errores aquí
                 break
-
-
 
     def receive(self):
         while len(self.clients) < 1:
@@ -111,8 +109,8 @@ class TriviaServer:
                 self.enviar_pregunta(client, questions[0])
 
     def enviar_pregunta(self, client, pregunta):
-     opciones = '\n'.join([f"{i}. {opcion}" for i, opcion in enumerate(pregunta['options'])])
-     client.send(f"{pregunta['question']}\n{opciones}".encode('utf-8'))
+        opciones = '\n'.join(f"{chr(97 + i)}. {opcion}" for i, opcion in enumerate(pregunta['options']))
+        client.send((pregunta['question'] + '\n' + opciones).encode('utf-8'))
 
     def start(self):
         print(Fore.GREEN + "Servidor iniciado!" + Style.RESET_ALL)

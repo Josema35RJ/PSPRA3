@@ -4,6 +4,7 @@ import random
 from questions import questions
 from colorama import Fore, Style
 from server import login_usuario
+import inquirer
 
 
 class TriviaServer:
@@ -34,10 +35,13 @@ class TriviaServer:
                 self.broadcast(f'{nickname} left the game!'.encode('ascii'))
                 break
     def enviar_pregunta(self, client, pregunta):
-        client.send(pregunta['question'].encode('utf-8'))
-        for i, opcion in enumerate(pregunta['options']):
-            client.send(f"{i}. {opcion}".encode('utf-8'))
-
+     client.send(pregunta['question'].encode('utf-8'))
+     opciones = [inquirer.List('respuesta',
+                               message=pregunta['question'],
+                               choices=pregunta['options'])]
+     respuesta = inquirer.prompt(opciones)
+     client.send(respuesta['respuesta'].encode())
+    
     def receive(self):
         while len(self.clients) < 1:
             client, address = self.server.accept()

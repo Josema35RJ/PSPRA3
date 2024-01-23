@@ -50,11 +50,7 @@ for _ in tqdm(range(5), desc="Progreso del juego", bar_format="{l_bar}%s{bar}%s{
     question = client_socket.recv(1024).decode()
     print(Fore.YELLOW + question + Style.RESET_ALL)
     answer = input("Ingrese el número de su respuesta: ")
-    client_socket.send(answer.encode())
-    if client_socket.fileno() != -1:  # Verifica si el socket aún está conectado
-        result = client_socket.recv(1024).decode()
-        print(Fore.CYAN + result + Style.RESET_ALL)
-    time.sleep(1)
+   
 
 
 score = client_socket.recv(1024).decode()
