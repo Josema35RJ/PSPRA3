@@ -72,7 +72,7 @@ class TriviaServer:
         self.clients = []
         self.nicknames = []
         self.scores = {}
-        self.historial = {}
+        self.historial = []
 
     def broadcast(self, message):
         for client in self.clients:
@@ -151,7 +151,6 @@ class TriviaServer:
                 self.nicknames.append(nickname)
                 self.clients.append(client)
                 self.scores[nickname] = 0
-                self.historial[nickname] = []
 
                 print(Fore.GREEN + f"Apodo del cliente: {nickname}!" + Style.RESET_ALL)
                 self.broadcast(f"{nickname} se unió al juego!".encode('utf-8'))
@@ -170,12 +169,21 @@ class TriviaServer:
                 pregunta = random.choice(questions)
                 questions.remove(pregunta)
                 self.enviar_pregunta(client, pregunta)
-                
+        with open('historial.json', 'a') as f:
+                json.dump(self.historial, f)
+                f.write('\n')
+
+                # Imprimir el contenido del historial.json
+                self.imprimir_historial()        
     def start(self):
         print(Fore.GREEN + "Servidor iniciado!" + Style.RESET_ALL)
         self.server.listen()
         self.receive()
-        
+    def imprimir_historial(self):
+        with open('historial.json') as f:
+            historial = json.load(f)
+            print("Contenido del historial.json:")
+            print(json.dumps(historial, indent=4))
 server = TriviaServer()
 server.start()
 
