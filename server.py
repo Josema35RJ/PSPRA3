@@ -62,7 +62,6 @@ def login_usuario(conn):
                     return True
             conn.send("Correo electrÃ³nico o contraseÃ±a incorrectos. IntÃ©ntalo de nuevo.".encode())
 
-
 class TriviaServer:
     def __init__(self, host = 'localhost', port = 1234):
         self.host = host
@@ -79,30 +78,41 @@ class TriviaServer:
             client.send(message)
 
     def handle(self, client):
-     while True:
-        try:
-            respuesta = client.recv(1024).decode('utf-8')
-            self.enviar_pregunta(client, questions[0])
-        except:
-            index = self.clients.index(client)
-            nickname = self.nicknames[index]
-            self.clients.remove(client)
-            client.close()
-            self.nicknames.remove(nickname)
-            break
+        while True:
+            try:
+                # Selecciona una pregunta aleatoria
+                pregunta = random.choice(questions)
+                questions.remove(pregunta)
 
+                # Envía la pregunta al cliente
+                self.enviar_pregunta(client, pregunta)
+
+                # Recibe la respuesta del cliente
+                respuesta = client.recv(1024).decode('utf-8')
+
+                # Verifica si la respuesta es correcta
+                acertado = self.verificar_respuesta(respuesta, pregunta)
+                if acertado:
+                    self.scores[self.nicknames[self.clients.index(client)]] += 1
+
+                # Envía feedback al cliente
+                feedback = "Correcto!" if acertado else "Incorrecto."
+                client.send(feedback.encode('utf-8'))
+
+                # Envía la puntuación actual al cliente
+                puntuacion = self.scores[self.nicknames[self.clients.index(client)]]
+                client.send(f"Tu puntuación actual es {puntuacion}.".encode('utf-8'))
+
+                if len(questions) == 0:
+                    break
+            except:
+              break
     def enviar_pregunta(self, client, pregunta):
-     # Crear el mensaje con la pregunta y las opciones
-     mensaje = pregunta['question'] + '\n' + '\n'.join(pregunta['options'])
-     # Enviar el mensaje al cliente
-     client.send(mensaje.encode('utf-8'))
-     # Recibir la respuesta del cliente
-     respuesta = client.recv(1024).decode('utf-8')
-     # Verificar si la respuesta es correcta
-     # Informar al cliente de su puntuación actual
-     client.send(f"Tu puntuación actual es {self.scores[self.nicknames[self.clients.index(client)]]}.".encode())
-     # Añadir la pregunta, la respuesta y si fue correcta o no al historial del cliente
-     #self.historial[self.nicknames[self.clients.index(client)]].append((pregunta['question'], respuesta, acertado))
+        mensaje = pregunta['question'] + '\n' + '\n'.join(pregunta['options'])
+        client.send(mensaje.encode('utf-8'))
+
+    def verificar_respuesta(self, respuesta, pregunta):
+        return respuesta == pregunta['answer']
 
     def receive(self):
         while True:
@@ -120,8 +130,6 @@ class TriviaServer:
                     self.historial[nickname] = []
 
                     print(Fore.GREEN + f"Apodo del cliente: {nickname}!" + Style.RESET_ALL)
-                    pregunta_numero = random.randint(0, len(questions) - 1)
-                    pregunta_texto = questions[pregunta_numero]['question']
                     self.broadcast(f"{nickname} se uniÃ³ al juego!".encode('utf-8'))
                     client.send('Conectado al servidor!'.encode('ascii'))
 
@@ -129,11 +137,11 @@ class TriviaServer:
                     thread.start()
             else:
                 print(Fore.GREEN + "El juego ha comenzado!" + Style.RESET_ALL)
-                for i in range(len(questions)):
-                    self.broadcast(("Pregunta {}: {}\n{}".format(i+1, pregunta_texto, '\n'.join(questions[pregunta_numero]['options']))).encode('utf-8'))
+                for i in range(5):
+                    pregunta = questions[i]
+                    self.broadcast(("Pregunta {}: {}\n{}".format(i+1, pregunta['question'], '\n'.join(pregunta['options']))).encode('utf-8'))
                     for client in self.clients:
-                        pregunta_numero = random.randint(0, len(questions) - 1)
-                        self.enviar_pregunta(client, questions[pregunta_numero]) 
+                        self.enviar_pregunta(client, pregunta)
                 break
 
     def start(self):

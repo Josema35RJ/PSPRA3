@@ -50,10 +50,13 @@ if confirmacion == "NICK":
 while True:
     try:
         message = client_socket.recv(1024).decode()
-        if message.endswith('?'):  # Si el mensaje termina con un signo de interrogación, es una pregunta
-          print(Fore.GREEN + message + Style.RESET_ALL)
-          answer = input("Ingrese el número de su respuesta: ")
-          client_socket.send(answer.encode())
+        if message == "El juego ha terminado.":
+            print(Fore.YELLOW + message + Style.RESET_ALL)
+            break
+        elif message.endswith('?'):  # Si el mensaje termina con un signo de interrogación, es una pregunta
+            print(Fore.GREEN + message + Style.RESET_ALL)
+            answer = input("Ingrese el número de su respuesta: ")
+            client_socket.send(answer.encode())
         elif message.endswith('!'):
             print(Fore.YELLOW + message + Style.RESET_ALL)
         else:  # Si no, es un mensaje normal 
