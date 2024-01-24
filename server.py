@@ -120,9 +120,14 @@ class TriviaServer:
             puntuaciones = "\n".join([f"{nick}: {score}" for nick, score in self.scores.items()])
             mensaje_puntuaciones = f"Puntuaciones finales:\n{puntuaciones}"
             client.send(mensaje_puntuaciones.encode('utf-8'))
-        with open('historial.json', 'w') as f:
-            historial = {"puntuaciones": self.scores, "ganador": ganadores}
-            json.dump(historial, f)
+        historial = {"puntuaciones": self.scores, "ganador": ganadores}
+        self.historial.append(historial)
+
+        # Al finalizar_juego
+        with open('historial.json', 'a') as f:
+            for entry in self.historial:
+                json.dump(entry, f)
+                f.write('\n')
             
     def enviar_pregunta(self, client, pregunta):
         mensaje = pregunta['question'] + '\n' + '\n'.join(pregunta['options'])
@@ -167,12 +172,7 @@ class TriviaServer:
         print(Fore.GREEN + "Servidor iniciado!" + Style.RESET_ALL)
         self.server.listen()
         self.receive()
-        self.finalizar_juego()
-
-  
         
+server = TriviaServer()
+server.start()
 
-server = TriviaServer()
-server.start()
-server = TriviaServer()
-server.start()
