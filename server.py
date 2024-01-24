@@ -39,7 +39,7 @@ def login_usuario(conn):
         clave = cargar_clave()
         opcion, email, contrasena = conn.recv(1024).decode().split(',')
 
-        # Verifica si el archivo existe antes de abrirlo
+       
         if not os.path.exists('usuarios.bin'):
             open('usuarios.bin', 'a').close()
 
@@ -83,26 +83,24 @@ class TriviaServer:
      while True:
         try:
             if num_preguntas < 5:
-                # Selecciona una pregunta aleatoria
+              
                 pregunta = random.choice(questions)
                 questions.remove(pregunta)
 
-                # Envía la pregunta al cliente
+               
                 self.enviar_pregunta(client, pregunta)
 
-                # Recibe la respuesta del cliente
                 respuesta = client.recv(1024).decode('utf-8')
 
-                # Verifica si la respuesta es correcta
+               
                 acertado = self.verificar_respuesta(respuesta, pregunta)
                 if acertado:
                     self.scores[self.nicknames[self.clients.index(client)]] += 1
 
-                # Envía feedback al cliente
+              
                 feedback = "Correcto!" if acertado else "Incorrecto!"
                 client.send(feedback.encode('utf-8'))
 
-                # Envía la puntuación actual al cliente
                 puntuacion = self.scores[self.nicknames[self.clients.index(client)]]
                 client.send(f"Tu puntuación actual es {puntuacion}.".encode('utf-8'))
 
@@ -112,9 +110,9 @@ class TriviaServer:
         except:
             break
 
-    # Al finalizar el juego, verifica si todos los clientes han terminado
+  
      if all(num_preguntas >= 5 for num_preguntas in self.scores.values()):
-        # Si todos los clientes han terminado, envía las puntuaciones y los ganadores
+
         puntuacion_final = self.scores[self.nicknames[self.clients.index(client)]]
         client.send(f"Fin del juego!!!".encode('utf-8')) 
         max_score = max(self.scores.values())
@@ -126,7 +124,6 @@ class TriviaServer:
         historial = {"puntuaciones": self.scores, "ganador": ganadores}
         self.historial.append(historial)
 
-        # Al finalizar el juego
         with open('historial.json', 'a') as f:
             json.dump(self.historial, f)
             f.write('\n')
@@ -173,7 +170,7 @@ class TriviaServer:
                 json.dump(self.historial, f)
                 f.write('\n')
 
-                # Imprimir el contenido del historial.json
+              
                 self.imprimir_historial()        
     def start(self):
         print(Fore.GREEN + "Servidor iniciado!" + Style.RESET_ALL)

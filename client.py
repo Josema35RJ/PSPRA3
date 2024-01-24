@@ -42,13 +42,13 @@ def iniciar_sesion_o_registrarse():
 
 iniciar_sesion_o_registrarse()
 
-# Espera la confirmación del servidor antes de solicitar el apodo
+
 confirmacion = client_socket.recv(1024).decode()
 if confirmacion == "NICK":
     nickname = input("Ingrese su apodo: ")
     client_socket.send(nickname.encode())
 
-# Espera a que el servidor indique que el juego ha comenzado
+
 while True:
     message = client_socket.recv(1024).decode()
     if message == "El juego ha comenzado.":
@@ -64,13 +64,13 @@ while True:
         if message == "El juego ha terminado.":
             print(Fore.YELLOW + message + Style.RESET_ALL)
             break
-        elif message.endswith('?'):  # Si el mensaje termina con un signo de interrogación, es una pregunta
+        elif message.endswith('?'):  
             print(Fore.GREEN + message + Style.RESET_ALL)
             answer = input("Ingrese el número de su respuesta: ")
             client_socket.send(answer.encode())
         elif message.endswith('!'):
             print(Fore.YELLOW + message + Style.RESET_ALL)
-        else:  # Si no, es un mensaje normal 
+        else:  
             print(Fore.BLUE + message + Style.RESET_ALL)
             answer = input("Ingrese el número de su respuesta: ")
             client_socket.send(answer.encode())
