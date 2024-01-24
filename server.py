@@ -62,6 +62,7 @@ def login_usuario(conn):
                     return True
             conn.send("Correo electrónico o contraseña incorrectos. Inténtalo de nuevo.".encode())
 
+
 class TriviaServer:
     def __init__(self, host = 'localhost', port = 1234):
         self.host = host
@@ -98,7 +99,7 @@ class TriviaServer:
                         self.scores[self.nicknames[self.clients.index(client)]] += 1
 
                     # Envía feedback al cliente
-                    feedback = "Correcto!" if acertado else "Incorrecto."
+                    feedback = "Correcto!" if acertado else "Incorrecto!"
                     client.send(feedback.encode('utf-8'))
 
                     # Envía la puntuación actual al cliente
@@ -109,8 +110,20 @@ class TriviaServer:
                 else:
                     break
             except:
+                
                 break
-
+        puntuacion_final = self.scores[self.nicknames[self.clients.index(client)]]
+        client.send(f"Fin del juego!!!".encode('utf-8')) 
+        max_score = max(self.scores.values())
+        ganadores = [nick for nick, score in self.scores.items() if score == max_score]
+        for client in self.clients:
+            puntuaciones = "\n".join([f"{nick}: {score}" for nick, score in self.scores.items()])
+            mensaje_puntuaciones = f"Puntuaciones finales:\n{puntuaciones}"
+            client.send(mensaje_puntuaciones.encode('utf-8'))
+        with open('historial.json', 'w') as f:
+            historial = {"puntuaciones": self.scores, "ganador": ganadores}
+            json.dump(historial, f)
+            
     def enviar_pregunta(self, client, pregunta):
         mensaje = pregunta['question'] + '\n' + '\n'.join(pregunta['options'])
         client.send(mensaje.encode('utf-8'))
@@ -139,25 +152,27 @@ class TriviaServer:
                 thread = threading.Thread(target=self.handle, args=(client,))
                 thread.start()
 
+            if len(self.clients) < 2:
+                self.broadcast("Esperando a más jugadores...".encode('utf-8'))
+
         print(Fore.GREEN + "El juego ha comenzado!" + Style.RESET_ALL)
+        self.broadcast("El juego ha comenzado.".encode('utf-8'))
         for client in self.clients:
             for _ in range(5):
                 pregunta = random.choice(questions)
                 questions.remove(pregunta)
                 self.enviar_pregunta(client, pregunta)
-
+                
     def start(self):
         print(Fore.GREEN + "Servidor iniciado!" + Style.RESET_ALL)
         self.server.listen()
         self.receive()
         self.finalizar_juego()
 
-    def finalizar_juego(self):
-        max_score = max(self.scores.values())
-        ganadores = [nick for nick, score in self.scores.items() if score == max_score]
-        self.broadcast(f"El juego ha terminado. {'Empate' if len(ganadores) > 1 else 'Ganador'}: {', '.join(ganadores)}".encode('utf-8'))
-        with open('historial.json', 'w') as f:
-            json.dump(self.historial, f)
+  
+        
 
+server = TriviaServer()
+server.start()
 server = TriviaServer()
 server.start()

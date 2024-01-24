@@ -39,6 +39,7 @@ def iniciar_sesion_o_registrarse():
         else:
             print(Fore.RED + respuesta + Style.RESET_ALL)
 
+
 iniciar_sesion_o_registrarse()
 
 # Espera la confirmación del servidor antes de solicitar el apodo
@@ -46,6 +47,16 @@ confirmacion = client_socket.recv(1024).decode()
 if confirmacion == "NICK":
     nickname = input("Ingrese su apodo: ")
     client_socket.send(nickname.encode())
+
+# Espera a que el servidor indique que el juego ha comenzado
+while True:
+    message = client_socket.recv(1024).decode()
+    if message == "El juego ha comenzado.":
+        print(Fore.GREEN + message + Style.RESET_ALL)
+        break
+    elif message == "Esperando a más jugadores...":
+        print(Fore.YELLOW + message + Style.RESET_ALL)
+        time.sleep(5)
 
 while True:
     try:
