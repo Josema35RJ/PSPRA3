@@ -79,39 +79,42 @@ class TriviaServer:
             client.send(message)
 
     def handle(self, client):
-        num_preguntas = 0
-        while True:
-            try:
-                if num_preguntas < 5:
-                    # Selecciona una pregunta aleatoria
-                    pregunta = random.choice(questions)
-                    questions.remove(pregunta)
+     num_preguntas = 0
+     while True:
+        try:
+            if num_preguntas < 5:
+                # Selecciona una pregunta aleatoria
+                pregunta = random.choice(questions)
+                questions.remove(pregunta)
 
-                    # Envía la pregunta al cliente
-                    self.enviar_pregunta(client, pregunta)
+                # Envía la pregunta al cliente
+                self.enviar_pregunta(client, pregunta)
 
-                    # Recibe la respuesta del cliente
-                    respuesta = client.recv(1024).decode('utf-8')
+                # Recibe la respuesta del cliente
+                respuesta = client.recv(1024).decode('utf-8')
 
-                    # Verifica si la respuesta es correcta
-                    acertado = self.verificar_respuesta(respuesta, pregunta)
-                    if acertado:
-                        self.scores[self.nicknames[self.clients.index(client)]] += 1
+                # Verifica si la respuesta es correcta
+                acertado = self.verificar_respuesta(respuesta, pregunta)
+                if acertado:
+                    self.scores[self.nicknames[self.clients.index(client)]] += 1
 
-                    # Envía feedback al cliente
-                    feedback = "Correcto!" if acertado else "Incorrecto!"
-                    client.send(feedback.encode('utf-8'))
+                # Envía feedback al cliente
+                feedback = "Correcto!" if acertado else "Incorrecto!"
+                client.send(feedback.encode('utf-8'))
 
-                    # Envía la puntuación actual al cliente
-                    puntuacion = self.scores[self.nicknames[self.clients.index(client)]]
-                    client.send(f"Tu puntuación actual es {puntuacion}.".encode('utf-8'))
+                # Envía la puntuación actual al cliente
+                puntuacion = self.scores[self.nicknames[self.clients.index(client)]]
+                client.send(f"Tu puntuación actual es {puntuacion}.".encode('utf-8'))
 
-                    num_preguntas += 1
-                else:
-                    break
-            except:
-                
+                num_preguntas += 1
+            else:
                 break
+        except:
+            break
+
+    # Al finalizar el juego, verifica si todos los clientes han terminado
+     if all(num_preguntas >= 5 for num_preguntas in self.scores.values()):
+        # Si todos los clientes han terminado, envía las puntuaciones y los ganadores
         puntuacion_final = self.scores[self.nicknames[self.clients.index(client)]]
         client.send(f"Fin del juego!!!".encode('utf-8')) 
         max_score = max(self.scores.values())
@@ -123,11 +126,11 @@ class TriviaServer:
         historial = {"puntuaciones": self.scores, "ganador": ganadores}
         self.historial.append(historial)
 
-        # Al finalizar_juego
+        # Al finalizar el juego
         with open('historial.json', 'a') as f:
-            for entry in self.historial:
-                json.dump(entry, f)
-                f.write('\n')
+            json.dump(self.historial, f)
+            f.write('\n')
+
             
     def enviar_pregunta(self, client, pregunta):
         mensaje = pregunta['question'] + '\n' + '\n'.join(pregunta['options'])
