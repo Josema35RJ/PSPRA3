@@ -52,7 +52,7 @@ def login_usuario(conn):
                         conn.send("OK".encode())
                         return True
                     elif opcion == '2':
-                        conn.send("El correo electrÃ³nico ya estÃ¡ registrado.".encode())
+                        conn.send("El correo electrónico ya está registrado.".encode())
                         return False
 
             if opcion == '2':
@@ -60,7 +60,7 @@ def login_usuario(conn):
                     f.write(encriptar_mensaje(email + ',' + hash_password(contrasena), clave) + b'\n')
                     conn.send("OK".encode())
                     return True
-            conn.send("Correo electrÃ³nico o contraseÃ±a incorrectos. IntÃ©ntalo de nuevo.".encode())
+            conn.send("Correo electrónico o contraseña incorrectos. Inténtalo de nuevo.".encode())
 
 class TriviaServer:
     def __init__(self, host = 'localhost', port = 1234):
@@ -78,35 +78,39 @@ class TriviaServer:
             client.send(message)
 
     def handle(self, client):
+        num_preguntas = 0
         while True:
             try:
-                # Selecciona una pregunta aleatoria
-                pregunta = random.choice(questions)
-                questions.remove(pregunta)
+                if num_preguntas < 5:
+                    # Selecciona una pregunta aleatoria
+                    pregunta = random.choice(questions)
+                    questions.remove(pregunta)
 
-                # Envía la pregunta al cliente
-                self.enviar_pregunta(client, pregunta)
+                    # Envía la pregunta al cliente
+                    self.enviar_pregunta(client, pregunta)
 
-                # Recibe la respuesta del cliente
-                respuesta = client.recv(1024).decode('utf-8')
+                    # Recibe la respuesta del cliente
+                    respuesta = client.recv(1024).decode('utf-8')
 
-                # Verifica si la respuesta es correcta
-                acertado = self.verificar_respuesta(respuesta, pregunta)
-                if acertado:
-                    self.scores[self.nicknames[self.clients.index(client)]] += 1
+                    # Verifica si la respuesta es correcta
+                    acertado = self.verificar_respuesta(respuesta, pregunta)
+                    if acertado:
+                        self.scores[self.nicknames[self.clients.index(client)]] += 1
 
-                # Envía feedback al cliente
-                feedback = "Correcto!" if acertado else "Incorrecto."
-                client.send(feedback.encode('utf-8'))
+                    # Envía feedback al cliente
+                    feedback = "Correcto!" if acertado else "Incorrecto."
+                    client.send(feedback.encode('utf-8'))
 
-                # Envía la puntuación actual al cliente
-                puntuacion = self.scores[self.nicknames[self.clients.index(client)]]
-                client.send(f"Tu puntuación actual es {puntuacion}.".encode('utf-8'))
+                    # Envía la puntuación actual al cliente
+                    puntuacion = self.scores[self.nicknames[self.clients.index(client)]]
+                    client.send(f"Tu puntuación actual es {puntuacion}.".encode('utf-8'))
 
-                if len(questions) == 0:
+                    num_preguntas += 1
+                else:
                     break
             except:
-              break
+                break
+
     def enviar_pregunta(self, client, pregunta):
         mensaje = pregunta['question'] + '\n' + '\n'.join(pregunta['options'])
         client.send(mensaje.encode('utf-8'))
@@ -115,34 +119,32 @@ class TriviaServer:
         return respuesta == pregunta['answer']
 
     def receive(self):
-        while True:
-            if len(self.clients) < 2:
-                print(Fore.YELLOW + "Esperando jugadores..." + Style.RESET_ALL)
-                client, address = self.server.accept()
-                print(Fore.GREEN + f"ConexiÃ³n establecida con {str(address)}" + Style.RESET_ALL)
+        while len(self.clients) < 2:
+            print(Fore.YELLOW + "Esperando jugadores..." + Style.RESET_ALL)
+            client, address = self.server.accept()
+            print(Fore.GREEN + f"Conexión establecida con {str(address)}" + Style.RESET_ALL)
 
-                if login_usuario(client):
-                    client.send('NICK'.encode('ascii'))
-                    nickname = client.recv(1024).decode('ascii')
-                    self.nicknames.append(nickname)
-                    self.clients.append(client)
-                    self.scores[nickname] = 0
-                    self.historial[nickname] = []
+            if login_usuario(client):
+                client.send('NICK'.encode('ascii'))
+                nickname = client.recv(1024).decode('ascii')
+                self.nicknames.append(nickname)
+                self.clients.append(client)
+                self.scores[nickname] = 0
+                self.historial[nickname] = []
 
-                    print(Fore.GREEN + f"Apodo del cliente: {nickname}!" + Style.RESET_ALL)
-                    self.broadcast(f"{nickname} se uniÃ³ al juego!".encode('utf-8'))
-                    client.send('Conectado al servidor!'.encode('ascii'))
+                print(Fore.GREEN + f"Apodo del cliente: {nickname}!" + Style.RESET_ALL)
+                self.broadcast(f"{nickname} se unió al juego!".encode('utf-8'))
+                client.send('Conectado al servidor!'.encode('ascii'))
 
-                    thread = threading.Thread(target=self.handle, args=(client,))
-                    thread.start()
-            else:
-                print(Fore.GREEN + "El juego ha comenzado!" + Style.RESET_ALL)
-                for i in range(5):
-                    pregunta = questions[i]
-                    self.broadcast(("Pregunta {}: {}\n{}".format(i+1, pregunta['question'], '\n'.join(pregunta['options']))).encode('utf-8'))
-                    for client in self.clients:
-                        self.enviar_pregunta(client, pregunta)
-                break
+                thread = threading.Thread(target=self.handle, args=(client,))
+                thread.start()
+
+        print(Fore.GREEN + "El juego ha comenzado!" + Style.RESET_ALL)
+        for client in self.clients:
+            for _ in range(5):
+                pregunta = random.choice(questions)
+                questions.remove(pregunta)
+                self.enviar_pregunta(client, pregunta)
 
     def start(self):
         print(Fore.GREEN + "Servidor iniciado!" + Style.RESET_ALL)
