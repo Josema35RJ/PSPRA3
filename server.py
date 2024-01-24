@@ -7,6 +7,8 @@ from colorama import Fore, Style
 import base64
 from questions import questions
 import random
+import time
+import inquirer
 
 def hash_password(password):
     salt = os.urandom(32)
@@ -34,34 +36,36 @@ def desencriptar_mensaje(mensaje_encriptado, clave):
     return mensaje_desencriptado
 
 def login_usuario(conn):
-    clave = cargar_clave()
-    opcion, email, contrasena = conn.recv(1024).decode().split(',')
+    while True:
+        clave = cargar_clave()
+        opcion, email, contrasena = conn.recv(1024).decode().split(',')
 
-    # Verifica si el archivo existe antes de abrirlo
-    if not os.path.exists('usuarios.bin'):
-        open('usuarios.bin', 'a').close()
+        # Verifica si el archivo existe antes de abrirlo
+        if not os.path.exists('usuarios.bin'):
+            open('usuarios.bin', 'a').close()
 
-    with open('usuarios.bin', 'rb') as f:
-        usuarios = f.read().splitlines()
-        for usuario in usuarios:
-            correo, contrasena_guardada = desencriptar_mensaje(usuario, clave).split(',')
-            if correo == email:
-                if opcion == '1' and verify_password(contrasena_guardada, contrasena):
+        with open('usuarios.bin', 'rb') as f:
+            usuarios = f.read().splitlines()
+            for usuario in usuarios:
+                correo, contrasena_guardada = desencriptar_mensaje(usuario, clave).split(',')
+                if correo == email:
+                    if opcion == '1' and verify_password(contrasena_guardada, contrasena):
+                        conn.send("OK".encode())
+                        return True
+                    elif opcion == '2':
+                        conn.send("El correo electrÃ³nico ya estÃ¡ registrado.".encode())
+                        return False
+
+            if opcion == '2':
+                with open('usuarios.bin', 'ab') as f:
+                    f.write(encriptar_mensaje(email + ',' + hash_password(contrasena), clave) + b'\n')
                     conn.send("OK".encode())
                     return True
-                elif opcion == '2':
-                    conn.send("El correo electrónico ya está registrado.".encode())
-                    return
-        if opcion == '2':
-            with open('usuarios.bin', 'ab') as f:
-                f.write(encriptar_mensaje(email + ',' + hash_password(contrasena), clave) + b'\n')
-                conn.send("OK".encode())
-                return True
-        conn.send("Correo electrónico o contraseña incorrectos.".encode())
-    return False
+            conn.send("Correo electrÃ³nico o contraseÃ±a incorrectos. IntÃ©ntalo de nuevo.".encode())
+
 
 class TriviaServer:
-    def __init__(self, host = 'localhost', port = 9999):
+    def __init__(self, host = '10.10.1.14', port = 1234):
         self.host = host
         self.port = port
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -69,6 +73,7 @@ class TriviaServer:
         self.clients = []
         self.nicknames = []
         self.scores = {}
+        self.historial = {}
 
     def broadcast(self, message):
         for client in self.clients:
@@ -76,58 +81,76 @@ class TriviaServer:
 
     def handle(self, client):
         pregunta_actual = 0
-        while pregunta_actual < 5:
+        while True:
             try:
-                if client in self.clients:  # Verifica si el cliente aún está conectado
-                    respuesta = client.recv(1024).decode()
-                    print(f"Respuesta recibida: {respuesta}")  # Imprime la respuesta para depurar
-
-                    # Envía una nueva pregunta después de recibir una respuesta
-                    pregunta_numero = random.randint(0, len(questions) - 1)
-                    self.enviar_pregunta(client, questions[pregunta_numero])
-                    
-                    pregunta_actual += 1
-
-                    if pregunta_actual >= len(questions):
-                       print(f"FIN DE LAS PREGUNTAS")
-            except Exception as e:
-                print(f"Error: {e}")
+                message = client.recv(1024)
+                self.broadcast(message)
+            except:
+                index = self.clients.index(client)
+                nickname = self.nicknames[index]
+                self.broadcast(f'{nickname} left the game!'.encode('ascii'))
+                self.clients.remove(client)
+                client.close()
+                self.nicknames.remove(nickname)
                 break
 
+    def verificar_respuesta(self, client, respuesta, pregunta):
+        if respuesta == pregunta['answer']:
+            self.scores[self.nicknames[self.clients.index(client)]] += 1
+            return True
+        return False
+    def enviar_pregunta(self, client, pregunta):
+     mensaje = pregunta['question'] + '\n' + '\n'.join(pregunta['options'])
+     client.send(mensaje.encode('utf-8'))
+     respuesta = client.recv(1024).decode('utf-8')
+     acertado = self.verificar_respuesta(respuesta, pregunta)
+     client.send(f"Has {'acertado' if acertado else 'fallado'} la respuesta.".encode())
+     client.send(f"Tu puntuaciÃ³n actual es {self.scores[self.nicknames[self.clients.index(client)]]}.".encode())
+     self.historial[self.nicknames[self.clients.index(client)]].append((pregunta['question'], respuesta, acertado))
 
+ 
     def receive(self):
         while True:
-            client, address = self.server.accept()
-            print(Fore.GREEN + f"Conexión establecida con {str(address)}" + Style.RESET_ALL)
+            if len(self.clients) < 2:
+                print(Fore.YELLOW + "Esperando jugadores..." + Style.RESET_ALL)
+                client, address = self.server.accept()
+                print(Fore.GREEN + f"ConexiÃ³n establecida con {str(address)}" + Style.RESET_ALL)
 
-            if login_usuario(client):
-                client.send('NICK'.encode('ascii'))
-                nickname = client.recv(1024).decode('ascii')
-                self.nicknames.append(nickname)
-                self.clients.append(client)
+                if login_usuario(client):
+                    client.send('NICK'.encode('ascii'))
+                    nickname = client.recv(1024).decode('ascii')
+                    self.nicknames.append(nickname)
+                    self.clients.append(client)
+                    self.scores[nickname] = 0
+                    self.historial[nickname] = []
 
-                print(Fore.GREEN + f"Apodo del cliente: {nickname}!" + Style.RESET_ALL)
-                self.broadcast(f"{nickname} se unió al juego!".encode('utf-8'))
-                client.send('Conectado al servidor!'.encode('ascii'))
-                
-                # Envía la primera pregunta al cliente
-                pregunta_numero = random.randint(0, len(questions) - 1)
-                self.enviar_pregunta(client, questions[pregunta_numero])                
-               
+                    print(Fore.GREEN + f"Apodo del cliente: {nickname}!" + Style.RESET_ALL)
+                    self.broadcast(f"{nickname} se uniÃ³ al juego!".encode('utf-8'))
+                    client.send('Conectado al servidor!'.encode('ascii'))
 
-            thread = threading.Thread(target=self.handle, args=(client,))
-            thread.start()
-
-
-    def enviar_pregunta(self, client, pregunta):
-        opciones = '\n'.join(f"{chr(97 + i)}. {opcion}" for i, opcion in enumerate(pregunta['options']))
-        client.send((pregunta['question'] + '\n' + opciones).encode('utf-8'))
+                    thread = threading.Thread(target=self.handle, args=(client,))
+                    thread.start()
+            else:
+                print(Fore.GREEN + "El juego ha comenzado!" + Style.RESET_ALL)
+                for i in range(len(questions)):
+                    self.broadcast(f"Pregunta {i+1}: {questions[i]['question']}".encode('utf-8'))
+                    for client in self.clients:
+                        pregunta_numero = random.randint(0, len(questions) - 1)
+                        self.enviar_pregunta(client, questions[pregunta_numero]) 
+                break
 
     def start(self):
         print(Fore.GREEN + "Servidor iniciado!" + Style.RESET_ALL)
         self.server.listen()
         self.receive()
+        self.finalizar_juego()
 
-if __name__ == "__main__":
-    server = TriviaServer()
-    server.start()
+    def finalizar_juego(self):
+        max_score = max(self.scores.values())
+        ganadores = [nick for nick, score in self.scores.items() if score == max_score]
+        self.broadcast(f"El juego ha terminado. {'Empate' if len(ganadores) > 1 else 'Ganador'}: {', '.join(ganadores)}".encode('utf-8'))
+        with open('historial.json', 'w') as f:
+            json.dump(self.historial, f)
+
+server = TriviaServer()
+server.start()
