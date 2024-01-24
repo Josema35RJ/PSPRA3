@@ -7,8 +7,6 @@ from colorama import Fore, Style
 import base64
 from questions import questions
 import random
-import time
-import inquirer
 
 def hash_password(password):
     salt = os.urandom(32)
@@ -65,7 +63,7 @@ def login_usuario(conn):
 
 
 class TriviaServer:
-    def __init__(self, host = '10.10.1.14', port = 1234):
+    def __init__(self, host = 'localhost', port = 1234):
         self.host = host
         self.port = port
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -79,20 +77,29 @@ class TriviaServer:
         for client in self.clients:
             client.send(message)
 
-    def handle(self, client):
-        pregunta_actual = 0
-        while True:
-            try:
-                message = client.recv(1024)
-                self.broadcast(message)
-            except:
-                index = self.clients.index(client)
-                nickname = self.nicknames[index]
-                self.broadcast(f'{nickname} left the game!'.encode('ascii'))
-                self.clients.remove(client)
-                client.close()
-                self.nicknames.remove(nickname)
-                break
+    def handle(self, client, pregunta):
+     while True:
+        try:
+            # Recibir la respuesta del cliente
+            respuesta = client.recv(1024).decode('utf-8')
+            # Verificar si la respuesta es correcta
+            acertado = self.verificar_respuesta(respuesta, pregunta)
+            # Informar al cliente si su respuesta fue correcta o incorrecta
+            client.send(f"Has {'acertado' if acertado else 'fallado'} la respuesta.".encode())
+            # Informar al cliente de su puntuación actual
+            client.send(f"Tu puntuación actual es {self.scores[self.nicknames[self.clients.index(client)]]}.".encode())
+            # Añadir la pregunta, la respuesta y si fue correcta o no al historial del cliente
+            self.historial[self.nicknames[self.clients.index(client)]].append((pregunta['question'], respuesta, acertado))
+            # Enviar la siguiente pregunta
+            self.enviar_pregunta(client, questions[0])
+        except:
+            index = self.clients.index(client)
+            nickname = self.nicknames[index]
+            self.broadcast(f'{nickname} left the game!'.encode('ascii'), client)  # Añade el cliente que envió el mensaje como argumento
+            self.clients.remove(client)
+            client.close()
+            self.nicknames.remove(nickname)
+            break
 
     def verificar_respuesta(self, client, respuesta, pregunta):
         if respuesta == pregunta['answer']:
@@ -100,15 +107,21 @@ class TriviaServer:
             return True
         return False
     def enviar_pregunta(self, client, pregunta):
+     # Crear el mensaje con la pregunta y las opciones
      mensaje = pregunta['question'] + '\n' + '\n'.join(pregunta['options'])
+     # Enviar el mensaje al cliente
      client.send(mensaje.encode('utf-8'))
+     # Recibir la respuesta del cliente
      respuesta = client.recv(1024).decode('utf-8')
+     # Verificar si la respuesta es correcta
      acertado = self.verificar_respuesta(respuesta, pregunta)
+     # Informar al cliente si su respuesta fue correcta o incorrecta
      client.send(f"Has {'acertado' if acertado else 'fallado'} la respuesta.".encode())
-     client.send(f"Tu puntuaciÃ³n actual es {self.scores[self.nicknames[self.clients.index(client)]]}.".encode())
+     # Informar al cliente de su puntuación actual
+     client.send(f"Tu puntuación actual es {self.scores[self.nicknames[self.clients.index(client)]]}.".encode())
+     # Añadir la pregunta, la respuesta y si fue correcta o no al historial del cliente
      self.historial[self.nicknames[self.clients.index(client)]].append((pregunta['question'], respuesta, acertado))
 
- 
     def receive(self):
         while True:
             if len(self.clients) < 2:
@@ -125,6 +138,8 @@ class TriviaServer:
                     self.historial[nickname] = []
 
                     print(Fore.GREEN + f"Apodo del cliente: {nickname}!" + Style.RESET_ALL)
+                    pregunta_numero = random.randint(0, len(questions) - 1)
+                    pregunta_texto = questions[pregunta_numero]['question']
                     self.broadcast(f"{nickname} se uniÃ³ al juego!".encode('utf-8'))
                     client.send('Conectado al servidor!'.encode('ascii'))
 
@@ -133,7 +148,7 @@ class TriviaServer:
             else:
                 print(Fore.GREEN + "El juego ha comenzado!" + Style.RESET_ALL)
                 for i in range(len(questions)):
-                    self.broadcast(f"Pregunta {i+1}: {questions[i]['question']}".encode('utf-8'))
+                    self.broadcast(("Pregunta {}: {}\n{}".format(i+1, pregunta_texto, '\n'.join(questions[pregunta_numero]['options']))).encode('utf-8'))
                     for client in self.clients:
                         pregunta_numero = random.randint(0, len(questions) - 1)
                         self.enviar_pregunta(client, questions[pregunta_numero]) 

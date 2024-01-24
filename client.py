@@ -5,7 +5,7 @@ from colorama import Fore, Style
 from tqdm import tqdm
 import time
 
-HOST = '10.10.1.14'
+HOST = 'localhost'
 PORT = 1234
 
 client_socket = socket.socket()
@@ -51,13 +51,15 @@ while True:
     try:
         message = client_socket.recv(1024).decode()
         if message.endswith('?'):  # Si el mensaje termina con un signo de interrogación, es una pregunta
-            print(Fore.GREEN + message + Style.RESET_ALL)
-            answer = input("Ingrese el número de su respuesta: ")
-            client_socket.send(answer.encode())
+          print(Fore.GREEN + message + Style.RESET_ALL)
+          answer = input("Ingrese el número de su respuesta: ")
+          client_socket.send(answer.encode())
         elif message.endswith('!'):
             print(Fore.YELLOW + message + Style.RESET_ALL)
         else:  # Si no, es un mensaje normal 
-            print(Fore.YELLOW + message + Style.RESET_ALL)
+            print(Fore.BLUE + message + Style.RESET_ALL)
+            answer = input("Ingrese el número de su respuesta: ")
+            client_socket.send(answer.encode())
     except Exception as e:
         print(f"Error: {e}")
         break
